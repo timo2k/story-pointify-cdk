@@ -14,6 +14,7 @@ import { Table } from 'aws-cdk-lib/aws-dynamodb';
 export interface WebSocketProps extends StackProps {
   roomsTable: Table;
   connectionsTable: Table;
+  logLevel: string;
 }
 
 export class WebSocket extends cdk.Stack {
@@ -36,6 +37,7 @@ export class WebSocket extends cdk.Stack {
       environment: {
         CONNECTIONS_TABLE_NAME: props?.connectionsTable.tableName!,
         ROOMS_TABLE_NAME: props?.roomsTable.tableName!,
+        LOG_LEVEL: props?.logLevel!,
       },
       handler: 'handler',
       runtime: Runtime.NODEJS_18_X,

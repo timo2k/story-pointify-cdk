@@ -3,6 +3,7 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { WebSocket } from '../lib/websocket-stack';
 import { DatabaseStack } from '../lib/database-stack';
+import { ObservabilityStack } from '../lib/observability-stack';
 
 const app = new cdk.App();
 
@@ -16,5 +17,8 @@ const databaseStack = new DatabaseStack(app, 'DatabaseStack', {});
 const webSocketApiStack = new WebSocket(app, 'WebsocketStack', {
   connectionsTable: databaseStack.connectionsTable,
   roomsTable: databaseStack.roomsTable,
+  logLevel: LOG_LEVEL,
 });
 webSocketApiStack.addDependency(databaseStack);
+
+new ObservabilityStack(app, 'ObservabilityStack');

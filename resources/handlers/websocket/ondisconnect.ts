@@ -5,16 +5,29 @@ import {
   DeleteItemCommand,
   QueryCommand,
 } from '@aws-sdk/client-dynamodb';
+import { Tracer } from '@aws-lambda-powertools/tracer';
+import { Metrics, MetricUnits } from '@aws-lambda-powertools/metrics';
+import { Logger } from '@aws-lambda-powertools/logger';
 
-const { CONNECTIONS_TABLE_NAME } = process.env;
-
-const ddb = new DynamoDBClient({
-  apiVersion: '2012-08-10',
-  region: process.env.AWS_REGION,
+const { CONNECTIONS_TABLE_NAME, LOG_LEVEL } = process.env;
+const logger = new Logger({
+  serviceName: 'websocketMessagingService',
+  logLevel: LOG_LEVEL,
 });
+const tracer = new Tracer({ serviceName: 'storyPointifyService' });
+const metrics = new Metrics({ namespace: 'story-pointify' });
+
+const ddb = tracer.captureAWSv3Client(
+  new DynamoDBClient({
+    apiVersion: '2012-08-10',
+    region: process.env.AWS_REGION,
+  })
+);
 
 class Lambda implements LambdaInterface {
+  @tracer.captureLambdaHandler()
   public async handler(event: APIGatewayProxyEvent, context: any) {
+    logger.addContext(context);
     let response: APIGatewayProxyResult = { statusCode: 200, body: 'OK' };
 
     try {
@@ -28,6 +41,10 @@ class Lambda implements LambdaInterface {
         })
       );
 
+      logger.debug(
+        `Retrieved connection items: ${JSON.stringify(connectionData)}`
+      );
+
       if (connectionData.Items?.length! > 0) {
         await ddb.send(
           new DeleteItemCommand({
@@ -35,7 +52,10 @@ class Lambda implements LambdaInterface {
             Key: { connectionId: { S: event.requestContext.connectionId! } },
           })
         );
+
+        metrics.addMetric('closedConnection', MetricUnits.Count, 1);
       }
+      metrics.publishStoredMetrics();
     } catch (e: any) {
       const body = e.stack || JSON.stringify(e, null, 2);
       response = { statusCode: 500, body: body };
