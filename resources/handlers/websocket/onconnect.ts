@@ -23,9 +23,7 @@ const ddb = tracer.captureAWSv3Client(
   })
 );
 
-const SQS = tracer.captureAWSv3Client(
-  new SQSClient({ region: process.env.AWS_REGION })
-);
+const SQS = tracer.captureAWSv3Client(new SQSClient({ region: process.env.AWS_REGION }));
 
 class Lambda implements LambdaInterface {
   @tracer.captureLambdaHandler()
@@ -56,11 +54,7 @@ class Lambda implements LambdaInterface {
         eventDate: new Date(),
       });
 
-      logger.debug(
-        `Putting status changes event in the SQS queue, ${JSON.stringify(
-          statusChangeEvent
-        )}`
-      );
+      logger.debug(`Putting status changes event in the SQS queue, ${JSON.stringify(statusChangeEvent)}`);
 
       let sqsResults = await SQS.send(
         new SendMessageCommand({

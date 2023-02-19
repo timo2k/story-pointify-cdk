@@ -1,10 +1,6 @@
 import { LambdaInterface } from '@aws-lambda-powertools/commons';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import {
-  DynamoDBClient,
-  DeleteItemCommand,
-  QueryCommand,
-} from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, DeleteItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { Metrics, MetricUnits } from '@aws-lambda-powertools/metrics';
 import { Logger } from '@aws-lambda-powertools/logger';
@@ -41,9 +37,7 @@ class Lambda implements LambdaInterface {
         })
       );
 
-      logger.debug(
-        `Retrieved connection items: ${JSON.stringify(connectionData)}`
-      );
+      logger.debug(`Retrieved connection items: ${JSON.stringify(connectionData)}`);
 
       if (connectionData.Items?.length! > 0) {
         await ddb.send(

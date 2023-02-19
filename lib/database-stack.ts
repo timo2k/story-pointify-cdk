@@ -1,11 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { RemovalPolicy } from 'aws-cdk-lib';
-import {
-  AttributeType,
-  BillingMode,
-  Table,
-  TableEncryption,
-} from 'aws-cdk-lib/aws-dynamodb';
+import { AttributeType, BillingMode, Table, TableEncryption } from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 
 export class DatabaseStack extends cdk.Stack {
@@ -23,13 +18,13 @@ export class DatabaseStack extends cdk.Stack {
       pointInTimeRecovery: false,
     });
 
-    this.roomsTable = new Table(this, 'story-pointify-rooms', {
+    this.roomsTable = new Table(this, 'rooms', {
       partitionKey: {
         name: 'id',
         type: AttributeType.STRING,
       },
       billingMode: BillingMode.PAY_PER_REQUEST,
-      tableName: 'rooms',
+      tableName: 'story-pointify-rooms',
       removalPolicy: RemovalPolicy.DESTROY,
       encryption: TableEncryption.AWS_MANAGED,
       pointInTimeRecovery: false,

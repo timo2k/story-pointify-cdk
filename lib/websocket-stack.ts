@@ -1,10 +1,7 @@
 import { WebSocketApi, WebSocketStage } from '@aws-cdk/aws-apigatewayv2-alpha';
 import * as cdk from 'aws-cdk-lib';
 import { Runtime, Tracing } from 'aws-cdk-lib/aws-lambda';
-import {
-  NodejsFunction,
-  NodejsFunctionProps,
-} from 'aws-cdk-lib/aws-lambda-nodejs';
+import { NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { WebSocketLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import { Construct } from 'constructs';
 import { join } from 'path';
@@ -86,17 +83,10 @@ export class WebSocket extends cdk.Stack {
     props?.connectionsTable.grantReadWriteData(onConnectHandler);
     statusQueue.grantSendMessages(onConnectHandler);
 
-    const onDisconnectHandler = new NodejsFunction(
-      this,
-      'onDisconnectHandler',
-      {
-        entry: join(
-          __dirname,
-          `/../resources/handlers/websocket/ondisconnect.ts`
-        ),
-        ...nodeJsFunctionProps,
-      }
-    );
+    const onDisconnectHandler = new NodejsFunction(this, 'onDisconnectHandler', {
+      entry: join(__dirname, `/../resources/handlers/websocket/ondisconnect.ts`),
+      ...nodeJsFunctionProps,
+    });
     props?.connectionsTable.grantReadWriteData(onDisconnectHandler);
     statusQueue.grantSendMessages(onDisconnectHandler);
 
@@ -104,28 +94,19 @@ export class WebSocket extends cdk.Stack {
     this.websocketApi = new WebSocketApi(this, 'StoryPointifyWebsocketApi', {
       apiName: 'Story Pointify Websocket API lol',
       connectRouteOptions: {
-        integration: new WebSocketLambdaIntegration(
-          'ConnectIntegration',
-          onConnectHandler
-        ),
+        integration: new WebSocketLambdaIntegration('ConnectIntegration', onConnectHandler),
       },
       disconnectRouteOptions: {
-        integration: new WebSocketLambdaIntegration(
-          'onDisconnectHandler',
-          onDisconnectHandler
-        ),
+        integration: new WebSocketLambdaIntegration('onDisconnectHandler', onDisconnectHandler),
       },
     });
 
     const prodStage = new WebSocketStage(this, 'Prod', {
       webSocketApi: this.websocketApi,
-      stageName: 'Productive',
+      stageName: 'prod',
       autoDeploy: true,
     });
 
-    nodeJsFunctionProps.environment!['APIGW_ENDPOINT'] = prodStage.url.replace(
-      'wss://',
-      ''
-    );
+    nodeJsFunctionProps.environment!['APIGW_ENDPOINT'] = prodStage.url.replace('wss://', '');
   }
 }

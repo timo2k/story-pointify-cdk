@@ -1,10 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import {
-  Color,
-  Dashboard,
-  GraphWidget,
-  Metric,
-} from 'aws-cdk-lib/aws-cloudwatch';
+import { Color, Dashboard, GraphWidget, Metric } from 'aws-cdk-lib/aws-cloudwatch';
 import { Construct } from 'constructs';
 
 export class ObservabilityStack extends cdk.Stack {
@@ -20,6 +15,12 @@ export class ObservabilityStack extends cdk.Stack {
     const newConnectionsMetric = new Metric({
       namespace: 'story-pointify',
       metricName: 'newConnection',
+      statistic: 'sum',
+    });
+
+    const messagesDeliveredMetric = new Metric({
+      namespace: 'story-pointify',
+      metricName: 'messageDelivered',
       statistic: 'sum',
     });
 
@@ -43,8 +44,18 @@ export class ObservabilityStack extends cdk.Stack {
       ],
     });
 
-    const dashboard = new Dashboard(this, 'Story Pointify Dashboard', {
-      widgets: [[newConnectionWidget, closedConnectionsWidget]],
+    const messagesDeliveredWidgets = new GraphWidget({
+      title: 'Messages Delivered',
+      width: 24,
+      left: [
+        messagesDeliveredMetric.with({
+          color: Color.GREEN,
+        }),
+      ],
+    });
+
+    new Dashboard(this, 'Story Pointify Dashboard', {
+      widgets: [[newConnectionWidget, closedConnectionsWidget], [messagesDeliveredWidgets]],
     });
   }
 }
