@@ -8,8 +8,11 @@ import {
 import { WebSocketLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import { Construct } from 'constructs';
 import { join } from 'path';
-import { StackProps } from 'aws-cdk-lib';
+import { Duration, StackProps } from 'aws-cdk-lib';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { AnyPrincipal, Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface WebSocketProps extends StackProps {
   roomsTable: Table;
@@ -22,6 +25,36 @@ export class WebSocket extends cdk.Stack {
 
   constructor(scope: Construct, id: string, props?: WebSocketProps) {
     super(scope, id, props);
+
+    // SQS queue for user status updates
+    const statusQueue = new sqs.Queue(this, 'user-status-queue', {
+      visibilityTimeout: Duration.seconds(30),
+      receiveMessageWaitTime: Duration.seconds(20),
+      encryption: sqs.QueueEncryption.KMS_MANAGED,
+    });
+    // Enforce TLS call from any services
+    statusQueue.addToResourcePolicy(
+      new PolicyStatement({
+        effect: Effect.DENY,
+        principals: [new AnyPrincipal()],
+        actions: ['sqs:*'],
+        resources: [statusQueue.queueArn],
+        conditions: {
+          Bool: { 'aws:SecureTransport': 'false' },
+        },
+      })
+    );
+    NagSuppressions.addResourceSuppressions(
+      statusQueue,
+      [
+        {
+          id: 'AwsSolutions-SQS3',
+          reason:
+            "Supress warning about missing DLQ. DLQ is not mission-critical here, a missing status update won't cause service disruptuion.",
+        },
+      ],
+      true
+    );
 
     const nodeJsFunctionProps: NodejsFunctionProps = {
       bundling: {
@@ -38,6 +71,7 @@ export class WebSocket extends cdk.Stack {
         CONNECTIONS_TABLE_NAME: props?.connectionsTable.tableName!,
         ROOMS_TABLE_NAME: props?.roomsTable.tableName!,
         LOG_LEVEL: props?.logLevel!,
+        STATUS_QUEUE_URL: statusQueue.queueUrl,
       },
       handler: 'handler',
       runtime: Runtime.NODEJS_18_X,
@@ -50,6 +84,7 @@ export class WebSocket extends cdk.Stack {
       ...nodeJsFunctionProps,
     });
     props?.connectionsTable.grantReadWriteData(onConnectHandler);
+    statusQueue.grantSendMessages(onConnectHandler);
 
     const onDisconnectHandler = new NodejsFunction(
       this,
@@ -63,6 +98,7 @@ export class WebSocket extends cdk.Stack {
       }
     );
     props?.connectionsTable.grantReadWriteData(onDisconnectHandler);
+    statusQueue.grantSendMessages(onDisconnectHandler);
 
     // Create Websocket API-Gateway
     this.websocketApi = new WebSocketApi(this, 'StoryPointifyWebsocketApi', {

@@ -23,7 +23,7 @@ export class DatabaseStack extends cdk.Stack {
       pointInTimeRecovery: false,
     });
 
-    this.roomsTable = new Table(this, 'rooms', {
+    this.roomsTable = new Table(this, 'story-pointify-rooms', {
       partitionKey: {
         name: 'id',
         type: AttributeType.STRING,
