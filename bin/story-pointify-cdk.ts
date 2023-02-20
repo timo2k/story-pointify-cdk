@@ -4,6 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 import { WebSocket } from '../lib/websocket-stack';
 import { DatabaseStack } from '../lib/database-stack';
 import { ObservabilityStack } from '../lib/observability-stack';
+import { RestApiStack } from '../lib/rest-api-stack';
 
 const app = new cdk.App();
 
@@ -21,5 +22,15 @@ const webSocketApiStack = new WebSocket(app, 'WebsocketStack', {
   logLevel: LOG_LEVEL,
 });
 webSocketApiStack.addDependency(databaseStack);
+
+const restApiStack = new RestApiStack(app, 'RestApiStack', {
+  logLevel: LOG_LEVEL,
+  messagesTable: databaseStack.messagesTable,
+  roomsTable: databaseStack.roomsTable,
+  connectionsTable: databaseStack.connectionsTable,
+  webSocketApi: webSocketApiStack.websocketApi,
+});
+restApiStack.addDependency(webSocketApiStack);
+restApiStack.addDependency(databaseStack);
 
 new ObservabilityStack(app, 'ObservabilityStack');
