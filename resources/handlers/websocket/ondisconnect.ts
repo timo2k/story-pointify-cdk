@@ -7,7 +7,7 @@ import { Logger } from '@aws-lambda-powertools/logger';
 
 const { CONNECTIONS_TABLE_NAME, LOG_LEVEL } = process.env;
 const logger = new Logger({
-  serviceName: 'websocketMessagingService',
+  serviceName: 'storyPointifyService',
   logLevel: LOG_LEVEL,
 });
 const tracer = new Tracer({ serviceName: 'storyPointifyService' });

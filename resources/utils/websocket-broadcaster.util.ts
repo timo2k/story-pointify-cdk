@@ -37,7 +37,7 @@ export class WebsocketBroadcaster {
           try {
             await this._apigwManagementApi.send(
               new PostToConnectionCommand({
-                ConnectionId: connectionData.connectionId.toString(),
+                ConnectionId: connectionData.connectionId.S,
                 Data: Buffer.from(JSON.stringify(payload)),
               })
             );

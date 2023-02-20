@@ -13,6 +13,7 @@ import { NagSuppressions } from 'cdk-nag';
 
 export interface WebSocketProps extends StackProps {
   roomsTable: Table;
+  messagesTable: Table;
   connectionsTable: Table;
   logLevel: string;
 }
@@ -53,6 +54,12 @@ export class WebSocket extends cdk.Stack {
       true
     );
 
+    const websocketPolicyStatement = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ['execute-api:ManageConnections', 'execute-api:Invoke'],
+      resources: ['*'],
+    });
+
     const nodeJsFunctionProps: NodejsFunctionProps = {
       bundling: {
         externalModules: ['aws-sdk'],
@@ -67,6 +74,7 @@ export class WebSocket extends cdk.Stack {
       environment: {
         CONNECTIONS_TABLE_NAME: props?.connectionsTable.tableName!,
         ROOMS_TABLE_NAME: props?.roomsTable.tableName!,
+        MESSAGES_TABLE_NAME: props?.messagesTable.tableName!,
         LOG_LEVEL: props?.logLevel!,
         STATUS_QUEUE_URL: statusQueue.queueUrl,
       },
@@ -90,6 +98,14 @@ export class WebSocket extends cdk.Stack {
     props?.connectionsTable.grantReadWriteData(onDisconnectHandler);
     statusQueue.grantSendMessages(onDisconnectHandler);
 
+    const onMessageHandler = new NodejsFunction(this, 'onMessageHandler', {
+      entry: join(__dirname, `/../resources/handlers/websocket/onmessage.ts`),
+      ...nodeJsFunctionProps,
+    });
+    onMessageHandler.addToRolePolicy(websocketPolicyStatement);
+    props?.connectionsTable.grantReadWriteData(onMessageHandler);
+    props?.messagesTable.grantReadWriteData(onMessageHandler);
+
     // Create Websocket API-Gateway
     this.websocketApi = new WebSocketApi(this, 'StoryPointifyWebsocketApi', {
       apiName: 'Story Pointify Websocket API lol',
@@ -97,8 +113,9 @@ export class WebSocket extends cdk.Stack {
         integration: new WebSocketLambdaIntegration('ConnectIntegration', onConnectHandler),
       },
       disconnectRouteOptions: {
-        integration: new WebSocketLambdaIntegration('onDisconnectHandler', onDisconnectHandler),
+        integration: new WebSocketLambdaIntegration('DisconnectIntegration', onDisconnectHandler),
       },
+      defaultRouteOptions: { integration: new WebSocketLambdaIntegration('DefaultIntegration', onMessageHandler) },
     });
 
     const prodStage = new WebSocketStage(this, 'Prod', {
