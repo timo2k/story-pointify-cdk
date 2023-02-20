@@ -56,7 +56,7 @@ export class RestApiStack extends Stack {
     const postRoomsIntegration = new LambdaIntegration(postRoomsHandler);
 
     this.restApi = new RestApi(this, 'storyPointifyRestApi', {
-      restApiName: 'Story Pointify RESTs API lol',
+      restApiName: 'Story Pointify REST API lol',
     });
 
     this.apiGatewayEndpoint = this.restApi.url;
