@@ -10,6 +10,7 @@ import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { AnyPrincipal, Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { NagSuppressions } from 'cdk-nag';
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export interface WebSocketProps extends StackProps {
   roomsTable: Table;
@@ -125,5 +126,22 @@ export class WebSocket extends cdk.Stack {
     });
 
     nodeJsFunctionProps.environment!['APIGW_ENDPOINT'] = prodStage.url.replace('wss://', '');
+
+    const userStatusBroadcastHandler = new NodejsFunction(this, 'userStatusBroadcastHandler', {
+      entry: join(__dirname, `/../resources/handlers/websocket/status-broadcast.ts`),
+      ...nodeJsFunctionProps,
+    });
+    userStatusBroadcastHandler.addEventSource(
+      new SqsEventSource(statusQueue, {
+        batchSize: 10,
+        maxBatchingWindow: Duration.minutes(0),
+        reportBatchItemFailures: true,
+      })
+    );
+    statusQueue.grantConsumeMessages(userStatusBroadcastHandler);
+    props?.connectionsTable.grantReadWriteData(userStatusBroadcastHandler);
+
+    this.websocketApi.grantManageConnections(onMessageHandler);
+    this.websocketApi.grantManageConnections(userStatusBroadcastHandler);
   }
 }

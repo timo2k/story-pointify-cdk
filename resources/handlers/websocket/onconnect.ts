@@ -37,6 +37,7 @@ class Lambda implements LambdaInterface {
       TableName: CONNECTIONS_TABLE_NAME,
       Item: {
         connectionId: { S: event.requestContext.connectionId! },
+        userId: { S: 'test1234userID' }, //TODO: Unique
       },
     };
 
@@ -49,7 +50,7 @@ class Lambda implements LambdaInterface {
 
       // Prepare status change event for broadcast
       let statusChangeEvent = new StatusChangeEvent({
-        userId: 'test1234abc', // Make unique userID
+        userId: 'test1234userID', // Make unique userID
         currentStatus: Status.ONLINE,
         eventDate: new Date(),
       });
